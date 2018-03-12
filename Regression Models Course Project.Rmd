@@ -1,0 +1,171 @@
+---
+title: "Regression Models Course Project"
+author: "William Matthews"
+date: "March 10, 2018"
+output: 
+  pdf_document: 
+    fig_caption: yes
+    fig_height: 5.5
+    fig_width: 6.5
+keep_md: yes
+---
+## Executive Summary
+We will be reviewing the mtcars dataset and exploring the relationship between its set of variables and
+miles per gallon (MPG) as the outcome. Of particular interest are the following questions:
+
+1. Is an automatic or manual transmission better for mpg?
+2. Can I quantify the mpg difference between automatic and manual transmission?
+
+## Conclusions:
+
+Based on our analysis cars with manual transmission get higher mpg than those with automatic transmission. 
+The difference is about 7.2 mpg. However, transmission type only accounts for about 36% of the variability
+in mpg. As a result we looked at the other variables in the mtcars dataset to see what affect they had on
+mpg. 
+ 
+The other variables from mtcars that had the highest affect on mpg were hp, cyl, and wt. 
+ 
+When adjusting for hp, cyl, & wt manual transmission increased mpg by about 1.8 over automatic transmission.
+Mpg decreased by about 2.5 for every 1000 lb. increase in wt (adjusted for hp, cyl, & am).
+When cyl (the number of cylinders) increases from 4 to 6 to 8, mpg will decrease by 3 and 2.2 respectively
+(adjusted for hp, wt, & am). 
+
+```{r include=FALSE}
+# Load tidyverse package
+library(tidyverse)
+```
+
+```{r}
+
+# Load mtcars dataset
+data(mtcars) 
+```
+
+## Exploratory Data Analysis
+```{r}
+# Use dim() to obtain the dimensions of the data frame
+dim(mtcars) 
+```
+
+```{r}
+# Use head() to obtain the first n observations of the dataset.
+head(mtcars, 3)
+```
+
+```{r}
+# Use the str() function to return the structure of the mtcars dataset. 
+str(mtcars)
+```
+
+```{r}
+# Display the correlation between mpg and the other variables in mtcars
+cor(mtcars)[1,]
+```
+
+The variables with the highest correlation to mpg are cyl, disp, hp, & wt
+
+```{r}
+# Recode selected numeric variables as factors
+mtcars$cyl <- factor(mtcars$cyl)
+mtcars$am <- factor(mtcars$am, labels = c("Automatic", "Manual")) # 0 = automatic, 1 = manual
+mtcars$gear <- factor(mtcars$gear)
+mtcars$carb <- factor(mtcars$carb)
+```
+
+## Regression Analysis
+```{r}
+# Aggregate the mpg by transmission type (auto, manual)
+aggregate(mpg~am, data = mtcars, mean)
+```
+
+The data indicates that on average mpg is higher with manual transmissions. 
+
+## Statistical Inference
+
+```{r}
+# Quantify the difference in mpg for the am variable with a t-test.
+t.test(mpg ~ am, data = mtcars)
+```
+
+The p-value = 0.001374, which is less than .05, indicating that this is a significant difference and thus reject the null hypothesis that automatic and manual transmissions have the same effect on mpg.  
+
+### Model selection
+#### Linear models
+
+```{r}
+# Use lm function to fit a linear model with mpg as the outcome and am as the predictor.
+fit <- lm(mpg~am, data = mtcars)
+
+# View summary of lm fit.
+summary(fit)
+```
+
+The lm summary shows that mpg increases by 7.245 for manual transmission. 
+The R-squared:  0.3598 indicates that this model explains only 34% of the variance of mpg.  
+
+#### Multivariate linear model
+```{r}
+# Use the lm function to fit the linear model with mpg as the outcome and the other variables as 
+# predictors.
+fit1 <- lm(mpg ~ ., data = mtcars)
+```
+
+Use the step fuction to select a formula-based model by AIC of the variables that have the highest correlation to mpg, ie the "best" model.
+mv_fit <- step(fit1, direction = "both")
+```{r message=FALSE, include=FALSE}
+mv_fit <- step(fit1, direction = "both")
+
+```
+
+The model with the lowest AIC and thus fit is mpg ~ cyl + hp + wt + am
+
+```{r}
+# View summary of mv_fit model
+summary(mv_fit)
+```
+
+When accounting for the other variables (cyl, hp, wt) manual transmission increases mpg by 1.8. 
+The R^2 value indicates tht 86.59% of the variance is explained by the model. 
+
+```{r}
+# Use anova function to compare the base model against the best model.
+anova(fit, mv_fit)
+```
+
+```{r}
+# Test the confidence of the model.
+confint(mv_fit)
+```
+
+We can say with 95% confidence that the variables correlations are within the ranges listed. 
+
+### Residual
+
+The Residuals vs Fitted plot (Appendix - Plot 3) shows that the points are randomly distributed indicating independence.
+The Normal Q-Q plot shows that the distribution is generally normal because the points mostly fall on the normal line.
+The Scale-Location plot shows the points scattered in a constant pattern indicating a constance variance condition.
+The Residuals vs Leverage plot shows some outliers
+
+\newpage
+
+## Appendix
+
+### Plot 1: Plot mpg by transmission type with mpg on the y axis and transmission type on the x axis.
+```{r}
+plot(mpg~am, data = mtcars)
+```
+
+\newpage
+
+### Plot 2: Use the pairs function to plot a matrix of the relationship betwen mpg and the other variables.
+```{r}
+pairs(mpg~., data = mtcars)
+```
+
+\newpage
+
+### Plot 3: View the residual plots for multivariate regression model and compute regression diagnostic of model to uncover outliers.
+```{r}
+par(mfrow = c(2,2))
+plot(mv_fit)
+```
